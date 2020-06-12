@@ -330,7 +330,7 @@ function createQuestionaireMenu(id){
 					.attr("r", 4)
 					.style("opacity", function(d){
 						if(debateListInfo[j][d.count] && d.handle == unsortedCandidateList[j])
-							if($("#line-" + d.handle).css("stroke-width") == "4px")
+							if($("#line-" + d.handle).css("opacity") == 1)
 								return 1;
 							else
 								return 0.2;
@@ -406,7 +406,7 @@ function createQuestionaireMenu(id){
 					.attr("r", 4)
 					.style("opacity", function(d){
 						if(typeof(returnWithdrawlDate(d.handle)) != 'undefined' && returnWithdrawlDate(d.handle).getTime() > d.event.getTime() && returnCampaignAnnoucementDate(d.handle) < d.event.getTime()  && d.handle == unsortedCandidateList[j]){
-							if($("#line-" + d.handle).css("stroke-width") == "4px")
+							if($("#line-" + d.handle).css("opacity") == 1)
 								return 1;
 							else
 								return 0.2;
@@ -460,7 +460,7 @@ function createQuestionaireMenu(id){
 				.attr("cy", function(d){return yScale(d.follower);})
 				.attr("r", 6)
 				.style("opacity", function(d){
-					if($("#line-" + d.handle).css("stroke-width") == "4px")
+					if($("#line-" + d.handle).css("opacity") == 1)
 						return 1;
 					else
 						return 0.2;})
@@ -509,7 +509,7 @@ function createQuestionaireMenu(id){
 				.attr("r", 6)
 				.style("fill", "red")
 				.style("opacity", function(d){
-					if($("#line-" + d.handle).css("stroke-width") == "4px")
+					if($("#line-" + d.handle).css("opacity") == 1)
 						return 1;
 					else
 						return 0.2;})
