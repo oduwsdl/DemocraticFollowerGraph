@@ -1098,11 +1098,15 @@ function highlightLabelGraph(handle){
 	}else{
 		d3.select("#line-" + handle)
 			.style("stroke-width",4);
+		d3.select("#line-" + handle)
+			.style("opacity",1);
+			
 		var selectAllLines = $('.line').not("#line-"+handle);  
 		for (var i = 0, length = selectAllLines.length; i < length; i++) {
 			if (selectAllLines[i].style.opacity != 0){
 				d3.select(selectAllLines[i]).style("opacity", 0.2);
 			}
+			d3.select(selectAllLines[i]).style("stroke-width", 1.5);
 		}
 		var selectAllDots = $('.dot').not("#scatter-"+handle);
 		for (var i = 0, length = selectAllDots.length; i < length; i++) {
@@ -1112,34 +1116,37 @@ function highlightLabelGraph(handle){
 		}
 		d3.select("#label-" + handle)
 			.style("font-weight", "bold");
+		d3.select("#label-" + handle)
+			.style("opacity", 1);
 		var selectAllText = $('.label').not("#label-" + handle);
 		for (var i = 0, length = selectAllText.length; i < length; i++) {
 			if (selectAllText[i].style.opacity != 0){
 				d3.select(selectAllText[i]).style("opacity", 0.2);
 			}
+			d3.select(selectAllText[i]).style("font-weight", "normal");
 		}
-		
+		d3.select("#an-" + handle).style("opacity", 1);
 		var selectAllAnouncement = $('.ancircle').not("#an-" + handle);
 		for (var i = 0, length = selectAllAnouncement.length; i < length; i++) {
 			if (selectAllAnouncement[i].style.opacity != 0){
 				d3.select(selectAllAnouncement[i]).style("opacity", 0.2);
 			}
 		}
-		
+		d3.select("#w-" + handle).style("opacity", 1);
 		var selectAllWithdrawl = $('.wcircle').not("#w-" + handle);
 		for (var i = 0, length = selectAllWithdrawl.length; i < length; i++) {
 			if (selectAllWithdrawl[i].style.opacity != 0){
 				d3.select(selectAllWithdrawl[i]).style("opacity", 0.2);
 			}
 		}
-		
+		d3.selectAll("#debatePoints-" + handle).style("opacity", 1);
 		var selectDebatePoint = $('.debatepoint').not("#debatePoints-" + handle);
 		for (var i = 0, length = selectDebatePoint.length; i < length; i++) {
 			if (selectDebatePoint[i].style.opacity != 0){
 				d3.select(selectDebatePoint[i]).style("opacity", 0.2);
 			}
 		}
-		
+		d3.selectAll("#primaryPoints-" + handle).style("opacity", 1);
 		var selectPrimaryPoint = $('.primarypoint').not("#primaryPoints-" + handle);
 		for (var i = 0, length = selectPrimaryPoint.length; i < length; i++) {
 			if (selectPrimaryPoint[i].style.opacity != 0){
