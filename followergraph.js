@@ -37,7 +37,6 @@ window.addEventListener('scroll', function() {
 
 	// checking whether fully visible
 	if((position1.top >= 0 && position1.bottom <= window.innerHeight) || position2.top >= 0 && position2.bottom <= window.innerHeight) {
-		console.log("Cas 1");
 		//d3.select("#floataxis").style("opacity", 0);
 		d3.select("#floataxissvg").remove();
 	}
@@ -45,12 +44,10 @@ window.addEventListener('scroll', function() {
 	// checking for partial visibility
 	if((position1.top < window.innerHeight && position1.bottom >= 0)|| (position2.top < window.innerHeight && position2.bottom >= 0)) {
 		//d3.select("#floataxis").style("opacity", 0);
-		console.log("Cas 2");
 		d3.select("#floataxissvg").remove();
 	}
 	else{
 		//d3.select("#floataxis").style("opacity", 1);
-		console.log("Cas 3");
 		if(d3.select("#floataxissvg").empty()){
 			createFloatingAxis();
 		}
@@ -385,7 +382,6 @@ function createQuestionaireMenu(id){
 							.duration(500)		
 							.style("opacity", 0);	
 					});
-			console.log(primaryFollowers);
 			for(var j=0; j< unsortedCandidateList.length; j++){
 				svg.selectAll("#primaryPoints-" + unsortedCandidateList[j])
 					.data(primaryFollowers[j])
@@ -438,7 +434,6 @@ function createQuestionaireMenu(id){
 			var announcementData = []
 			for(var i=0; i< candidateList.length; i++){
 				var annoucementDate = returnCampaignAnnoucementDate(candidateList[i].handle);
-				console.log(candidateList[i].handle + "  " + annoucementDate + "   " + candidateList[i].announcement);
 				if(annoucementDate.getFullYear() < 2019){
 					announcementData.push({"handle": candidateList[i].handle, "announcement": annoucementDate, "follower": candidateList[i].announcement});
 				}else{
@@ -495,7 +490,6 @@ function createQuestionaireMenu(id){
 				var withdrawlDate = returnWithdrawlDate(candidateList[i].handle);
 				if(typeof withdrawlDate != 'undefined'){
 					withdrawlData.push({"handle": candidateList[i].handle, "withdrawl": withdrawlDate, "follower": candidateList[i].withdrawl});
-					console.log(withdrawlDate.toISOString().split("T")[0]);
 				}
 			}
 			svg.selectAll(".wcircle")
@@ -641,7 +635,7 @@ function highlightCandidatePlot(handle){
 
 /*Function to hide and show plot of Candidates based on checkbox values*/
 function changePlotStatus(handle){
-	console.log(handle)
+	console.log("changePlotStatus");
 	if(handle == "selectAll"){
 		var handlesList = unsortedCandidateList;
 	}else{
@@ -651,10 +645,14 @@ function changePlotStatus(handle){
 		for(let i=0; i< handlesList.length; i++){
 			d3.select("#line-" + handlesList[i])
 				.style("opacity", 1);
-			d3.select("#scatter-" + handlesList[i])
+			d3.select("#line-" + handlesList[i])
+				.style("stroke-width", 1.5);
+			d3.select("#scatter-" + handlesList[i]).selectAll(".dot")
 				.style("opacity", 1);
 			d3.select("#label-" + handlesList[i])
 				.style("opacity", 1);
+			d3.select("#label-" + handlesList[i])
+				.style("font-weight", "normal");
 			d3.selectAll("#debatePoints-" + handlesList[i])
 				.style("opacity", 1);
 			d3.selectAll("#primaryPoints-" + handlesList[i])
@@ -672,7 +670,7 @@ function changePlotStatus(handle){
 		for(let i=0; i< handlesList.length; i++){
 			d3.select("#line-" + handlesList[i])
 				.style("opacity", 0);
-			d3.select("#scatter-" + handlesList[i])
+			d3.select("#scatter-" + handlesList[i]).selectAll(".dot")
 				.style("opacity", 0);
 			d3.select("#label-" + handlesList[i])
 				.style("opacity", 0);
@@ -1041,7 +1039,6 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 
 /*Function to highlight and opaque line charts on click of labels*/
 function highlightLabelGraph(handle){
-	console.log($("#line-" + handle).css("stroke-width"));
 	if ($("#line-" + handle).css("stroke-width") == "4px"){
 		d3.select("#line-" + handle)
 			.style("stroke-width",1.5);
@@ -1108,6 +1105,7 @@ function highlightLabelGraph(handle){
 			}
 			d3.select(selectAllLines[i]).style("stroke-width", 1.5);
 		}
+		
 		var selectAllDots = $('.dot').not("#scatter-"+handle);
 		for (var i = 0, length = selectAllDots.length; i < length; i++) {
 			if (selectAllDots[i].style.opacity != 0){
