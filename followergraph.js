@@ -23,6 +23,9 @@ var candidateList;
 var unsortedCandidateList = [];
 var primaryFollowers = [];
 var debateFollowers = [];
+var div = d3.select("#followergraph").append("div")	
+			.attr("class", "tooltip")				
+			.style("opacity", 0);
 
 window.onload = function() {
     loadDemocraticList();
@@ -237,6 +240,7 @@ function loadDemocraticList(){
 				}
 				sortCandidates();
 				createCandidateFloatingWindow(candidateList, dataNest);
+				addAccountDeletionMark();
 			});
 		}
 	});
@@ -260,9 +264,6 @@ function createQuestionaireMenu(id){
 	let debateCount = 11;
 	let primaryCount = 7;
 	console.log("CreateMenu: " + id)
-	var div = d3.select("#followergraph").append("div")	
-				.attr("class", "tooltip")				
-				.style("opacity", 0);
 	if(id == 1){
 		if(document.getElementById("debate").checked){
 			var debateData = returnDebateInfo();
@@ -661,13 +662,16 @@ function changePlotStatus(handle){
 				.style("opacity", 1);
 			d3.select("#w-" + handlesList[i])
 				.style("opacity", 1);
+			d3.selectAll("#accountDeletion").style("opacity", 1);
 			if(handle == "selectAll"){
 				document.getElementById(handlesList[i]).checked = true;
 			}
-		}			
+		}
+			
 	}
 	else{
 		for(let i=0; i< handlesList.length; i++){
+			d3.selectAll("#accountDeletion").style("opacity", 0);
 			d3.select("#line-" + handlesList[i])
 				.style("opacity", 0);
 			d3.select("#scatter-" + handlesList[i]).selectAll(".dot")
@@ -840,9 +844,6 @@ function plotFollowerChart(datanest, color, valueLine){
 	var dot = svg.append("g")
 				.attr("id", "scatter")
 				.attr("transform", "translate( 0" + ","   + " 0)");
-	var div = d3.select("#followergraph").append("div")	
-			.attr("class", "tooltip")				
-			.style("opacity", 0);
 	
 	datanest.forEach(function(d, i){
 		
@@ -914,12 +915,9 @@ function plotFollowerChart(datanest, color, valueLine){
 
 /*Function to update the follower chart*/
 function updateFollowerChart(dataNest, color, dot, valueLine){
-	var div = d3.select("#followergraph").append("div")	
-			.attr("class", "tooltip")				
-			.style("opacity", 0);
 	dataNest.forEach(function(d, i){
 		if(d3.select("#scatter-"+d.values[0].handle).empty()) {
-			
+
 			svg.append("path")
 				.attr("class", "line")
 				.attr("id", "line-" + d.values[0].handle)
@@ -955,8 +953,6 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 					highlightLabelGraph(d.values[0].handle);
 				})
 				.on("mouseover", function(d) {	
-					console.log(d.handle);
-					console.log(d.DateTime);
 					div.transition()		
 						.duration(200)		
 						.style("opacity", 0.9);		
@@ -1094,6 +1090,7 @@ function highlightLabelGraph(handle){
 				d3.select(selectPrimaryPoint[i]).style("opacity", 1);
 			}
 		}
+		d3.selectAll("#accountDeletion").style("opacity", 1);
 	}else{
 		d3.select("#line-" + handle)
 			.style("stroke-width",4);
@@ -1152,6 +1149,11 @@ function highlightLabelGraph(handle){
 			if (selectPrimaryPoint[i].style.opacity != 0){
 				d3.select(selectPrimaryPoint[i]).style("opacity", 0.2);
 			}
+		}
+		if(handle != "mikegravel"){
+			d3.selectAll("#accountDeletion").style("opacity", 0.2);
+		}else{
+			d3.selectAll("#accountDeletion").style("opacity", 1);
 		}
 	}
 }
@@ -1340,5 +1342,39 @@ function returnPrimaryInfo(id=-1){
 		return caucusData;
 	}else{
 		return caucusData[id];
+	}
+}
+
+/* Function to add Twitter account deletion mark for @markgravel*/
+function addAccountDeletionMark(){
+	var temp = []
+	for(i=0;i< dataset.length; i++){
+		if(dataset[i].handle == "mikegravel")
+			temp.push(dataset[i])
+	}
+	var mikeGravelDataset = temp[temp.length-1];
+	if(typeof mikeGravelDataset != 'undefined'){
+		svg.append("rect")
+			.attr("id", "accountDeletion")
+			.attr("x", xScale(new Date(mikeGravelDataset.DateTime)))
+			.attr("y", yScale(mikeGravelDataset.FollowerCount))
+			//.attr("r", 6)
+			.attr("width", 6)
+			.attr("height", 6)
+			.style("opacity", 1)
+			.style("fill", "red")
+			.on("mouseover", function() {		
+				div.transition()		
+					.duration(200)		
+					.style("opacity", 0.9);		
+				div.html("@" + mikeGravelDataset.handle + "<br/>" + "Date:" + new Date(mikeGravelDataset.DateTime).toISOString().split("T")[0] + "<br/>" + "Account Deleted")	
+					.style("left", (d3.event.pageX) + "px")		
+					.style("top", (d3.event.pageY - 28) + "px");
+			})					
+			.on("mouseout", function(d) {		
+				div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+			});	
 	}
 }
