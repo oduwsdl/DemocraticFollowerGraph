@@ -858,20 +858,7 @@ function plotFollowerChart(datanest, color, valueLine){
 			.on("click", function(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
-				})
-			.on("mouseover", function() {		
-				div.transition()		
-					.duration(200)		
-					.style("opacity", 0.9);		
-				div.html("Start Memento: " + candidateList[i].start.toISOString().split("T")[0] + "<br/>" + "End Memento:" + candidateList[i].start.toISOString().split("T")[0])	
-					.style("left", (d3.event.pageX) + "px")		
-					.style("top", (d3.event.pageY - 28) + "px");
-			})					
-			.on("mouseout", function(d) {		
-				div.transition()		
-					.duration(500)		
-					.style("opacity", 0);	
-			});
+				});
 			
 			
 		svg.append("text")
@@ -907,7 +894,20 @@ function plotFollowerChart(datanest, color, valueLine){
 			.on("click", function(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
-				});
+				})
+			.on("mouseover", function(d) {		
+				div.transition()		
+					.duration(200)		
+					.style("opacity", 0.9);		
+				div.html("@" + d.handle + "<br/>" + "Memento: " + new Date(d.DateTime).toISOString().split("T")[0] + "Follower: " + "<br/>" + d.FollowerCount)	
+					.style("left", (d3.event.pageX) + "px")		
+					.style("top", (d3.event.pageY - 28) + "px");
+			})					
+			.on("mouseout", function(d) {		
+				div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	
+			});
 	});
 	return dot;
 }
@@ -919,7 +919,6 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 			.style("opacity", 0);
 	dataNest.forEach(function(d, i){
 		if(d3.select("#scatter-"+d.values[0].handle).empty()) {
-			//console.log("Update in if: " + d.values[0].handle);
 			
 			svg.append("path")
 				.attr("class", "line")
@@ -933,20 +932,8 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 				.on("click", function(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
-				})
-				.on("mouseover", function() {		
-					div.transition()		
-						.duration(200)		
-						.style("opacity", 0.9);		
-					div.html("Start Memento: " + candidateList[i].start.toISOString().split("T")[0] + "<br/>" + "End Memento:" + candidateList[i].start.toISOString().split("T")[0])	
-						.style("left", (d3.event.pageX) + "px")		
-						.style("top", (d3.event.pageY - 28) + "px");
-				})					
-				.on("mouseout", function(d) {		
-					div.transition()		
-						.duration(500)		
-						.style("opacity", 0);	
 				});
+
 			
 			dot.append("g")
 				.attr("id", "scatter-" + d.values[0].handle)
@@ -966,6 +953,21 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 				.on("click", function(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
+				})
+				.on("mouseover", function(d) {	
+					console.log(d.handle);
+					console.log(d.DateTime);
+					div.transition()		
+						.duration(200)		
+						.style("opacity", 0.9);		
+					div.html("@" + d.handle + "<br/>" + "Memento: " + new Date(d.DateTime).toISOString().split("T")[0] + "<br/>" + "Follower: " + d.FollowerCount)	
+						.style("left", (d3.event.pageX) + "px")		
+						.style("top", (d3.event.pageY - 28) + "px");
+				})					
+				.on("mouseout", function(d) {		
+					div.transition()		
+						.duration(500)		
+						.style("opacity", 0);	
 				});
 			
 			svg.append("text")
