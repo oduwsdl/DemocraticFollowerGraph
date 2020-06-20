@@ -13,6 +13,7 @@
 /*Global Variables Declared */
 var maxFollower = 0;
 var dataset = [];
+var dataNest;
 var margin = {top: 120, right: 130, bottom: 120, left: 90};
 var width = 1320 - margin.left - margin.right;
 var height = 24000 - margin.top - margin.bottom;
@@ -23,6 +24,10 @@ var candidateList;
 var unsortedCandidateList = [];
 var primaryFollowers = [];
 var debateFollowers = [];
+var dot;
+var valueLine;
+//Set Color Scale
+var color = d3.scaleOrdinal(d3.schemeCategory20);
 var div = d3.select("#followergraph").append("div")	
 			.attr("class", "tooltip")				
 			.style("opacity", 0);
@@ -40,17 +45,14 @@ window.addEventListener('scroll', function() {
 
 	// checking whether fully visible
 	if((position1.top >= 0 && position1.bottom <= window.innerHeight) || position2.top >= 0 && position2.bottom <= window.innerHeight) {
-		//d3.select("#floataxis").style("opacity", 0);
 		d3.select("#floataxissvg").remove();
 	}
 
 	// checking for partial visibility
 	if((position1.top < window.innerHeight && position1.bottom >= 0)|| (position2.top < window.innerHeight && position2.bottom >= 0)) {
-		//d3.select("#floataxis").style("opacity", 0);
 		d3.select("#floataxissvg").remove();
 	}
 	else{
-		//d3.select("#floataxis").style("opacity", 1);
 		if(d3.select("#floataxissvg").empty()){
 			createFloatingAxis();
 		}
@@ -94,17 +96,14 @@ jQuery(document).ready(function($){
 	
 /*Function to load Democratic Candidates list from text file*/
 function loadDemocraticList(){
-	//Set Color Scale
-	var color = d3.scaleOrdinal(d3.schemeCategory20);
 	//createFloatingAxis();
 	svg = setupSVG();
 	yScale = setupYaxis();
 	xScale = setupXaxis();
-	var valueLine = d3.line()
-						.x(function(d) { return xScale(new Date(d.DateTime)); })
-						.y(function(d) { return yScale(d.FollowerCount); }); 
+	valueLine = d3.line()
+					.x(function(d) { return xScale(new Date(d.DateTime)); })
+					.y(function(d) { return yScale(d.FollowerCount); }); 
 
-	var dot;
 	candidateList = [];
 	createQuestionaireFloatingWindow();
 	d3.text("data/Dem_handles.txt", function(handles) {
@@ -227,25 +226,62 @@ function loadDemocraticList(){
 					yScale = setupYaxis();
 				}
 				// Nest the entries by name
-				var dataNest = d3.nest()
-								.key(function (d) {
-									return d.id;
-								})
-								.entries(dataset);
+				dataNest = d3.nest()
+							.key(function (d) {
+								return d.id;
+							})
+							.entries(dataset);
 				if(d3.select("#scatter").empty()){
-					dot = plotFollowerChart(dataNest, color, valueLine);
+					plotFollowerChart();
 				}
 				else{
-					updateFollowerChart(dataNest, color, dot, valueLine);
+					updateFollowerChart();
 				}
 				sortCandidates();
-				createCandidateFloatingWindow(candidateList, dataNest);
+				createCandidateFloatingWindow(candidateList);
 				addAccountDeletionMark();
 			});
 		}
 	});
 }
 
+/*Function to read follower analysis text file*/
+function readInfoFile(){
+	var candidateFollowerAnalysis = [];
+	console.log("readInfoFile");
+	d3.text("data/Info.txt", function(data) {
+		console.log("Read InfoTxt file");
+		data = data.split("\n")
+		var temp = {};
+		for(let i=0; i< data.length; i++){
+			//console.log(data[i]);
+			if((i + 1)%4 == 1){
+				console.log("Handle: " + data[i]);
+				temp["handle"] = data[i];
+			}else if((i + 1)%4 == 2){
+				console.log("Start: " + data[i]);
+				let splitter = data[i].split(",");
+				temp["startmemento"] = new Date(splitter[0].split("ST: ")[1]);
+				temp["startfollower"] = splitter[1].split("SCount: ")[1]
+			}else if((i + 1)%4 == 3){
+				console.log("End: " + data[i]);
+				let splitter = data[i].split(",");
+				temp["endmemento"] = new Date(splitter[0].split("ET: ")[1]);
+				temp["endfollower"] = splitter[1].split("ECount: ")[1]
+			}else if((i + 1)%5 == 0){
+				console.log("Analysis: " + data[i]);
+				let splitter = data[i].split(",");
+				temp["increase"] = splitter[0].split("Increase: ")[1];
+				temp["perc"] = splitter[1].split("%Increase: ")[1]
+				console.log(temp);
+				candidateFollowerAnalysis.push(temp);
+				temp = {};
+			}
+		}
+		console.log(candidateFollowerAnalysis);
+		return candidateFollowerAnalysis;
+	});
+}
 /*Function to sort the candidate list based on follower count*/
 function sortCandidates(){
 	for(let i=0; i< candidateList.length -1;i++){
@@ -492,6 +528,10 @@ function createQuestionaireMenu(id){
 				if(typeof withdrawlDate != 'undefined'){
 					withdrawlData.push({"handle": candidateList[i].handle, "withdrawl": withdrawlDate, "follower": candidateList[i].withdrawl});
 				}
+				if($("#line-" + candidateList[i].handle + "-dash").css("stroke-width") == "4px"){
+					d3.select("#line-" + candidateList[i].handle + "-dash")
+						.style("stroke-dasharray", "10,10");
+				}
 			}
 			svg.selectAll(".wcircle")
 				.data(withdrawlData)
@@ -523,6 +563,8 @@ function createQuestionaireMenu(id){
 				});					
 		}else{
 			d3.selectAll(".wcircle").remove();
+			d3.selectAll(".line")
+				.style("stroke-dasharray", "0");
 		}
 	}
 
@@ -694,7 +736,7 @@ function changePlotStatus(handle){
 }
 
 /*Function to create floating window for Follower Count Sorted Candidate List*/
-function createCandidateFloatingWindow(rankedOrderList, dataset){
+function createCandidateFloatingWindow(rankedOrderList){
 	var elmnt = document.getElementById("candidatewindow");
 	var content = document.getElementById("candidatecontent");
 	content.innerHTML = "";
@@ -838,29 +880,70 @@ function setupXaxis(){
 }
 
 /*Function to plot the initial follower chart*/
-function plotFollowerChart(datanest, color, valueLine){
+function plotFollowerChart(){
 	console.log("Plot follower chart");
 
-	var dot = svg.append("g")
-				.attr("id", "scatter")
-				.attr("transform", "translate( 0" + ","   + " 0)");
+	dot = svg.append("g")
+			.attr("id", "scatter")
+			.attr("transform", "translate( 0" + ","   + " 0)");
 	
-	datanest.forEach(function(d, i){
+	dataNest.forEach(function(d, i){
 		
 		svg.append("path")
 			.attr("class", "line")
+			.attr("d", function(){
+				let withdrawlDate = returnWithdrawlDate(d.values[0].handle);
+				let values = []
+				if(typeof(withdrawlDate) == 'undefined'){
+					return valueLine(d.values);
+				}else{
+					for(let j=0; j< d.values.length; j++){
+						if(new Date(d.values[j].DateTime).getTime() <= withdrawlDate.getTime()){
+							values.push(d.values[j]);
+						}else{
+							values.push(d.values[j]);
+							break;
+						}
+					}
+					return valueLine(values);
+				}
+			})
 			.attr("id", "line-" + d.values[0].handle)
 			.attr("fill", "none")
 			.style("opacity", 1)
 			.attr("stroke", function(){
 				return d.color = color(d.key);})
 			.attr("stroke-width", 1.5)
-			.attr("d", function(){ return valueLine(d.values)})
 			.on("click", function(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
-				});
+			});
 			
+		svg.append("path")
+			.attr("class", "line")
+			.attr("d", function(){
+				let withdrawlDate = returnWithdrawlDate(d.values[0].handle);
+				let values = []
+				if(typeof(withdrawlDate) != 'undefined'){
+					for(let j=0; j< d.values.length; j++){
+						if(new Date(d.values[j].DateTime).getTime() >= withdrawlDate.getTime()){
+							values.push(d.values[j]);
+						}
+					}
+					return valueLine(values);
+				}
+			})
+			.attr("id", "line-" + d.values[0].handle + "-dash")
+			.attr("fill", "none")
+			.style("opacity", 1)
+			.attr("stroke", function(){
+				return d.color = color(d.key);})
+			.attr("stroke-width", 1.5)
+			.attr("stroke-dasharray", "0")
+			.on("click", function(){
+					console.log("Clicked the text: " + i);
+					highlightLabelGraph(d.values[0].handle);
+			});
 			
 		svg.append("text")
 			.attr("class", "label")
@@ -910,11 +993,11 @@ function plotFollowerChart(datanest, color, valueLine){
 					.style("opacity", 0);	
 			});
 	});
-	return dot;
 }
 
 /*Function to update the follower chart*/
-function updateFollowerChart(dataNest, color, dot, valueLine){
+function updateFollowerChart(){
+	//console.log(dataNest);
 	dataNest.forEach(function(d, i){
 		if(d3.select("#scatter-"+d.values[0].handle).empty()) {
 
@@ -926,12 +1009,53 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 					return d.color = color(d.key);})
 				.attr("stroke-width", 1.5)
 				.style("opacity", 1)
-				.attr("d", function(){ return valueLine(d.values)})
+				.attr("d", function(){
+					let withdrawlDate = returnWithdrawlDate(d.values[0].handle);
+					let values = []
+					if(typeof(withdrawlDate) == 'undefined'){
+						return valueLine(d.values);
+					}else{
+						for(let j=0; j< d.values.length; j++){
+							if(new Date(d.values[j].DateTime).getTime() <= withdrawlDate.getTime()){
+								values.push(d.values[j]);
+							}else{
+								values.push(d.values[j]);
+								break;
+							}
+						}
+						return valueLine(values);
+					}
+				})
 				.on("click", function(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
 				});
 
+		svg.append("path")
+			.attr("class", "line")
+			.attr("d", function(){
+				let withdrawlDate = returnWithdrawlDate(d.values[0].handle);
+				let values = []
+				if(typeof(withdrawlDate) != 'undefined'){
+					for(let j=0; j< d.values.length; j++){
+						if(new Date(d.values[j].DateTime).getTime() >= withdrawlDate.getTime()){
+							values.push(d.values[j]);
+						}
+					}
+					return valueLine(values);
+				}
+			})
+			.attr("id", "line-" + d.values[0].handle + "-dash")
+			.attr("fill", "none")
+			.style("opacity", 1)
+			.attr("stroke", function(){
+				return d.color = color(d.key);})
+			.attr("stroke-width", 1.5)
+			.attr("stroke-dasharray", "0")
+			.on("click", function(){
+					console.log("Clicked the text: " + i);
+					highlightLabelGraph(d.values[0].handle);
+			});
 			
 			dot.append("g")
 				.attr("id", "scatter-" + d.values[0].handle)
@@ -983,14 +1107,45 @@ function updateFollowerChart(dataNest, color, dot, valueLine){
 				})
 				
 		} else {
-			//console.log("Update in else: " + d.values[0].handle);
-			//Update all circles
 			
 			svg.select("#line-" + d.values[0].handle)
 				.transition()
 				.duration(750)
-				.attr("d", valueLine(d.values));
+				.attr("d", function(){
+					let withdrawlDate = returnWithdrawlDate(d.values[0].handle);
+					let values = []
+					if(typeof(withdrawlDate) == 'undefined'){
+						return valueLine(d.values);
+					}else{ 
+						for(let j=0; j< d.values.length; j++){
+							if(new Date(d.values[j].DateTime).getTime() <= withdrawlDate.getTime()){
+								values.push(d.values[j]);
+							}else{
+								values.push(d.values[j]);
+								break;
+							}
+						}
+						return valueLine(values);
+					}
+				})
 				
+			svg.select("#line-" + d.values[0].handle + "-dash")
+				.transition()
+				.duration(750)
+				.attr("d", function(){
+					let withdrawlDate = returnWithdrawlDate(d.values[0].handle);
+					let values = []
+					if(typeof(withdrawlDate) != 'undefined'){
+						for(let j=0; j< d.values.length; j++){
+							if(new Date(d.values[j].DateTime).getTime() >= withdrawlDate.getTime()){
+								values.push(d.values[j]);
+							}
+						}
+						return valueLine(values);
+					}
+				});				
+
+
 			svg.select("#label-" + d.values[0].handle)
 				.transition()
 				.duration(750)
@@ -1040,6 +1195,10 @@ function highlightLabelGraph(handle){
 	if ($("#line-" + handle).css("stroke-width") == "4px"){
 		d3.select("#line-" + handle)
 			.style("stroke-width",1.5);
+		d3.select("#line-" + handle + "-dash")
+			.style("stroke-dasharray", "0");
+		d3.select("#line-" + handle + "-dash")
+			.style("stroke-width", 1.5);
 		var selectAllLines = $('.line');
 		for (var i = 0, length = selectAllLines.length; i < length; i++) {
 			if (selectAllLines[i].style.opacity != 0){
@@ -1093,11 +1252,10 @@ function highlightLabelGraph(handle){
 		d3.selectAll("#accountDeletion").style("opacity", 1);
 	}else{
 		d3.select("#line-" + handle)
-			.style("stroke-width",4);
+			.style("stroke-width", 4);
 		d3.select("#line-" + handle)
-			.style("opacity",1);
-			
-		var selectAllLines = $('.line').not("#line-"+handle);  
+			.style("opacity", 1);
+		var selectAllLines = $('.line').not("#line-"+handle).not("#line-" + handle + "-dash");  
 		for (var i = 0, length = selectAllLines.length; i < length; i++) {
 			if (selectAllLines[i].style.opacity != 0){
 				d3.select(selectAllLines[i]).style("opacity", 0.2);
@@ -1136,6 +1294,7 @@ function highlightLabelGraph(handle){
 				d3.select(selectAllWithdrawl[i]).style("opacity", 0.2);
 			}
 		}
+
 		d3.selectAll("#debatePoints-" + handle).style("opacity", 1);
 		var selectDebatePoint = $('.debatepoint').not("#debatePoints-" + handle);
 		for (var i = 0, length = selectDebatePoint.length; i < length; i++) {
@@ -1154,6 +1313,19 @@ function highlightLabelGraph(handle){
 			d3.selectAll("#accountDeletion").style("opacity", 0.2);
 		}else{
 			d3.selectAll("#accountDeletion").style("opacity", 1);
+		}
+		if($("#w-" + handle).css("opacity") == 1){
+			d3.select("#line-" + handle + "-dash")
+				.style("stroke-dasharray", "10, 10");
+			d3.select("#line-" + handle + "-dash")
+				.style("stroke-width", 4);
+			d3.select("#line-" + handle + "-dash")
+				.style("opacity", 1);
+		}else{
+			d3.select("#line-" + handle + "-dash")
+				.style("stroke-width", 4);
+			d3.select("#line-" + handle + "-dash")
+				.style("opacity", 1);
 		}
 	}
 }
