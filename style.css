@@ -18,6 +18,7 @@ h1 {
   left: 20px;
   bottom: 5%;
   width: 200px;
+  cursor: crosshair;
 }
 
 #questionairewindow {
@@ -26,7 +27,7 @@ h1 {
   right: 30px;
   bottom:70%;
   width: 200px;
-  
+  cursor: crosshair;
 }
 
 .modal {
