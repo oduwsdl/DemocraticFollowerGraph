@@ -644,19 +644,33 @@ function createFloatingAxis(){
 				.range([ 0, width])
 				.nice();
 	
+	svg.append("text")
+		.attr("class", "yearlabel")
+		.attr("id", "firstyear")
+		.attr("transform", "translate(" + (width/3) + ", -60)")
+		.attr("dy", ".5em")
+		.style("opacity", 1)
+		.style("fill", "red")
+		.style("font", "24px times")
+		.text("2019");
+	
+	svg.append("text")
+		.attr("class", "yearlabel")
+		.attr("id", "secondyear")
+		.attr("transform", "translate(" + (0.85 * width) + ", -60)")
+		.attr("dy", ".5em")
+		.style("opacity", 1)
+		.style("fill", "red")
+		.style("font", "24px times")
+		.text("2020");
 	svg.append("g")
-		//.attr("transform", "translate(" + 0 + "," +  0 + ")")
 		.attr("id", "floataxis")
 		.style("font", "24px times")
 		.style("text-align", "center")
-		.call(d3.axisTop(xScale))
+		.call(d3.axisTop(xScale).tickFormat(d3.timeFormat("%b")))
 		.selectAll("text")
-		.attr("y", 0)
-		.attr("x", 9)
-		.attr("dy", ".35em")
-		.attr("transform", "rotate(270)")
-		.style("text-anchor", "start");
-	//d3.select("#floataxis").style("opacity", 0);
+		.attr("transform", "translate(0,-10)");
+	
 }
 
 /*Function to bring the plot of candidate based on click from Candidate Floating Window*/
@@ -852,30 +866,58 @@ function setupXaxis(){
 				.domain([new Date("2019-01-01 00:00:00"), new Date("2020-04-18 23:59:59")])
 				.range([ 0, width])
 				.nice();
+	
+	svg.append("text")
+		.attr("class", "yearlabel")
+		.attr("transform", "translate(" + (width/3) + ", -60)")
+		.attr("dy", ".5em")
+		.style("opacity", 1)
+		.style("fill", "red")
+		.style("font", "24px times")
+		.text("2019");
+	
+	svg.append("text")
+		.attr("class", "yearlabel")
+		.attr("transform", "translate(" + (0.85 * width) + ", -60)")
+		.attr("dy", ".5em")
+		.style("opacity", 1)
+		.style("fill", "red")
+		.style("font", "24px times")
+		.text("2020");
 
 	svg.append("g")
 		.attr("transform", "translate(0, 0)")
 		.attr("id", "topxaxis")
 		.style("font", "24px times")
-		.call(d3.axisTop(xScale))
+		.call(d3.axisTop(xScale).tickFormat(d3.timeFormat("%b")))
 		.selectAll("text")
-		.attr("y", 0)
-		.attr("x", 9)
-		.attr("dy", ".35em")
-		.attr("transform", "rotate(270)")
-		.style("text-anchor", "start");	
+		.attr("transform", "translate(0,-10)");	
 	
 	svg.append("g")
 		.attr("transform", "translate(0," + height + ")")
 		.attr("id", "xaxis")
 		.style("font", "24px times")
-		.call(d3.axisBottom(xScale))
+		.call(d3.axisBottom(xScale).tickFormat(d3.timeFormat("%b")))
 		.selectAll("text")
-		.attr("y", 0)
-		.attr("x", 9)
-		.attr("dy", ".35em")
-		.attr("transform", "rotate(90)")
-		.style("text-anchor", "start");
+		.attr("transform", "translate(0,10)");
+	
+	svg.append("text")
+		.attr("class", "yearlabel")
+		.attr("transform", "translate(" + (width/3) + "," +  (height +60) + ")")
+		.attr("dy", ".5em")
+		.style("opacity", 1)
+		.style("fill", "red")
+		.style("font", "24px times")
+		.text("2019");
+	
+	svg.append("text")
+		.attr("class", "yearlabel")
+		.attr("transform", "translate(" + (0.85 * width) + "," +  (height +60) + ")")
+		.attr("dy", ".5em")
+		.style("opacity", 1)
+		.style("fill", "red")
+		.style("font", "24px times")
+		.text("2020");
 	return xScale;
 }
 
