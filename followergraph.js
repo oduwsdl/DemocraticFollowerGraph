@@ -14,10 +14,12 @@
 var maxFollower = 0;
 var dataset = [];
 var dataNest;
+var minimapHeight = 300;
+var minimapWidth = 200;
 var margin = {top: 120, right: 130, bottom: 120, left: 90};
+var minimapMargin =  {top: 20, right: 10, bottom: 20, left: 30};
 var width = 1320 - margin.left - margin.right;
 var height = 24000 - margin.top - margin.bottom;
-var svg;
 var yScale;
 var xScale;
 var candidateList;
@@ -31,6 +33,11 @@ var color = d3.scaleOrdinal(d3.schemeCategory20);
 var div = d3.select("#followergraph").append("div")	
 			.attr("class", "tooltip")				
 			.style("opacity", 0);
+var drag;
+var svg_minimap;
+var slider;
+var sliderHeight = 50;
+var minimapValueLine;
 
 window.onload = function() {
     loadDemocraticList();
@@ -96,14 +103,19 @@ jQuery(document).ready(function($){
 	
 /*Function to load Democratic Candidates list from text file*/
 function loadDemocraticList(){
-	//createFloatingAxis();
 	svg = setupSVG();
-	yScale = setupYaxis();
-	xScale = setupXaxis();
+	yScale = setupYaxis(svg);
+	xScale = setupXaxis(svg);
+	//var minimapXScale = setupXaxisMinimap(svg_minimap, minimapWidth, minimapMargin);
+	//var minimapYScale = setupYaxisMinimap(svg_minimap, minimapHeight, minimapMargin);
 	valueLine = d3.line()
 					.x(function(d) { return xScale(new Date(d.DateTime)); })
 					.y(function(d) { return yScale(d.FollowerCount); }); 
-
+	/*
+	minimapValueLine = d3.line()
+					.x(function(d) { return minimapXScale(new Date(d.DateTime)); })
+					.y(function(d) { return minimapYScale(d.FollowerCount); }); 
+	*/
 	candidateList = [];
 	createQuestionaireFloatingWindow();
 	d3.text("data/Dem_handles.txt", function(handles) {
@@ -223,7 +235,8 @@ function loadDemocraticList(){
 				candidateList.push({"handle": handles[i].toLowerCase(), "follower": max, "announcement": annoucementClosestPoint, "withdrawl": withdrawlClosestPoint, "start": startMemento, "end": endMemento});
 				if (max > maxFollower){
 					maxFollower = max;
-					yScale = setupYaxis();
+					yScale = setupYaxis(svg);
+					//minimapYScale = setupYaxisMinimap(svg_minimap, minimapHeight, minimapMargin);
 				}
 				// Nest the entries by name
 				dataNest = d3.nest()
@@ -233,9 +246,11 @@ function loadDemocraticList(){
 							.entries(dataset);
 				if(d3.select("#scatter").empty()){
 					plotFollowerChart();
+					//plotMinimap();
 				}
 				else{
 					updateFollowerChart();
+					//updateMinimapFollowerChart();
 				}
 				sortCandidates();
 				createCandidateFloatingWindow(candidateList);
@@ -282,6 +297,7 @@ function readInfoFile(){
 		return candidateFollowerAnalysis;
 	});
 }
+
 /*Function to sort the candidate list based on follower count*/
 function sortCandidates(){
 	for(let i=0; i< candidateList.length -1;i++){
@@ -700,6 +716,10 @@ function changePlotStatus(handle){
 	}
 	if(document.getElementById(handle).checked){
 		for(let i=0; i< handlesList.length; i++){
+			d3.select("#line-" + handlesList[i]+"-dash")
+				.style("opacity", 1);
+			d3.select("#line-" + handlesList[i]+"-minimap")
+				.style("opacity", 0.5);
 			d3.select("#line-" + handlesList[i])
 				.style("opacity", 1);
 			d3.select("#line-" + handlesList[i])
@@ -741,6 +761,10 @@ function changePlotStatus(handle){
 			d3.select("#an-" + handlesList[i])
 				.style("opacity", 0);
 			d3.select("#w-" + handlesList[i])
+				.style("opacity", 0);
+			d3.select("#line-" + handlesList[i]+"-dash")
+				.style("opacity", 0);
+			d3.select("#line-" + handlesList[i]+"-minimap")
 				.style("opacity", 0);
 			if(handle == "selectAll"){
 				document.getElementById(handlesList[i]).checked = false;
@@ -811,17 +835,46 @@ function createCandidateFloatingWindow(rankedOrderList){
 
 /*Function to set up SVG*/
 function setupSVG(){
+	var scrollContainer = document.getElementById('followergraph')
+	drag = d3.drag()
+		.on('start drag', function() { 
+			scrollContainer.scrollTop = d3.event.y * (23421 / 300);
+			console.log("Start Drag:  " + scrollContainer.scrollTop);
+			console.log("Start Drag y event:::  " + d3.event.y);
+			slider.attr('y', d3.event.y);
+		});
+
 	// Add SVG to the HTML
-	var svg = d3.select("#followergraph").append("svg")
-			.attr("width", width + margin.left + margin.right)
-			.attr("height", height + margin.top + margin.bottom)
-			.append("g")
-			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	svg = d3.select(scrollContainer).append("svg")
+				.on('scroll', function(d) {
+					console.log("scroll: " + this.scrollTop);
+					let rectMove = this.scrollTop / (23421 / 300);
+					console.log("scroll y::: " + rectMove);
+					slider.attr('y', rectMove);
+				})			
+				.attr("width", width + margin.left + margin.right)
+				.attr("height", height + margin.top + margin.bottom)
+				.append("g")
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	svg_minimap = d3.select('#minimap').append("svg")
+						.attr('width', minimapWidth + minimapMargin.left)
+						.attr('height', minimapHeight + minimapMargin.top + minimapMargin.bottom)
+						.call(drag)
+						.append("g")
+						.attr("transform", "translate(" + 0 + "," + 0 + ")");
+
+	slider = svg_minimap.append('rect')
+				.attr('class', 'slider-rect')
+				.attr('width', minimapWidth)
+				.attr('height', sliderHeight)
+				.attr("transform", "translate(" + minimapMargin.left + "," + 0 + ")");;
+	
 	return svg;
 }
 
 /*Function to set up Y-axis*/
-function setupYaxis(){
+function setupYaxis(svg){
 	console.log("Set up Y axis");
 	//Add Y-axis	
 	var yScale = d3.scaleLinear()
@@ -832,10 +885,10 @@ function setupYaxis(){
 	var axisLabels = [];
 	var tickCount = 50; 
 	var followerLimit = Math.ceil(maxFollower/1000000)*1000000;
-	for(var i=0; i<400000;i+=40000){
+	for(var i=0; i<500000;i+=50000){
 		axisLabels.push(i);
 	}
-	for(var i=400000;i <= followerLimit; i+=100000){
+	for(var i=500000;i <= followerLimit; i+=100000){
 		axisLabels.push(i);
 	}
 	if (d3.select("#yaxis").empty()){
@@ -845,7 +898,13 @@ function setupYaxis(){
 		.call(d3.axisLeft(yScale)
 				.ticks(axisLabels.length)
 				.tickValues(axisLabels)
-				.tickFormat(d3.formatPrefix(".2", 1e6)));
+				.tickFormat(function(d){
+					if(d >= 1000000)
+						return d3.formatPrefix(".2", 1e6)(d);
+					else
+						return d3.formatPrefix(".0", 1e4)(d);
+				})
+			);
 	}
 	else{
 		svg.selectAll("#yaxis")
@@ -853,13 +912,18 @@ function setupYaxis(){
 		.call(d3.axisLeft(yScale)
 				.ticks(axisLabels.length)
 				.tickValues(axisLabels)
-				.tickFormat(d3.formatPrefix(".2", 1e6)));
+				.tickFormat(function(d){
+					if(d >= 1000000)
+						return d3.formatPrefix(".2", 1e6)(d);
+					else
+						return d3.formatPrefix(".0", 1e4)(d);
+				}));
 	}
 	return yScale;
 }
 
 /*Function to set up top fixed and bottom X-axis*/
-function setupXaxis(){
+function setupXaxis(svg){
 	console.log("Set up X axis");
 	 // Add X-axis
 	var xScale = d3.scaleTime()
@@ -996,7 +1060,7 @@ function plotFollowerChart(){
 			.attr("text-anchor", "start")
 			.style("fill", function() {
 				return d.color = color(d.key); })
-			.style("font", "20px times")
+			.style("font", "16px times")
 			.text("@" + d.values[0].handle)
 			.on("click", function(){
 				console.log("Clicked the text: " + i);
@@ -1025,7 +1089,7 @@ function plotFollowerChart(){
 				div.transition()		
 					.duration(200)		
 					.style("opacity", 0.9);		
-				div.html("@" + d.handle + "<br/>" + "Memento: " + new Date(d.DateTime).toISOString().split("T")[0] + "Follower: " + "<br/>" + d.FollowerCount)	
+				div.html("@" + d.handle + "<br/>" + "Memento: " + new Date(d.DateTime).toISOString().split("T")[0] + "Follower: " + "<br/>" + d3.format(",")(d.FollowerCount))	
 					.style("left", (d3.event.pageX) + "px")		
 					.style("top", (d3.event.pageY - 28) + "px");
 			})					
@@ -1122,7 +1186,7 @@ function updateFollowerChart(){
 					div.transition()		
 						.duration(200)		
 						.style("opacity", 0.9);		
-					div.html("@" + d.handle + "<br/>" + "Memento: " + new Date(d.DateTime).toISOString().split("T")[0] + "<br/>" + "Follower: " + d.FollowerCount)	
+					div.html("@" + d.handle + "<br/>" + "Memento: " + new Date(d.DateTime).toISOString().split("T")[0] + "<br/>" + "Follower: " + d3.format(",")(d.FollowerCount))	
 						.style("left", (d3.event.pageX) + "px")		
 						.style("top", (d3.event.pageY - 28) + "px");
 				})					
@@ -1237,9 +1301,13 @@ function highlightLabelGraph(handle){
 	if ($("#line-" + handle).css("stroke-width") == "4px"){
 		d3.select("#line-" + handle)
 			.style("stroke-width",1.5);
-		d3.select("#line-" + handle + "-dash")
-			.style("stroke-dasharray", "0");
-		d3.select("#line-" + handle + "-dash")
+		for(let i=0; i< unsortedCandidateList.length; i++){
+			d3.select("#line-" + unsortedCandidateList[i] + "-dash")
+				.style("stroke-dasharray", "0");
+			d3.select("#line-" + unsortedCandidateList[i] + "-dash")
+				.style("stroke-width", 1.5);
+		}
+		d3.select("#line-" + handle + "-minimap")
 			.style("stroke-width", 1.5);
 		var selectAllLines = $('.line');
 		for (var i = 0, length = selectAllLines.length; i < length; i++) {
@@ -1247,7 +1315,6 @@ function highlightLabelGraph(handle){
 				d3.select(selectAllLines[i]).style("opacity", 1);
 			}
 		}
-
 		var selectAllDots = $('.dot');
 		for (var i = 0, length = selectAllDots.length; i < length; i++) {
 			if (selectAllDots[i].style.opacity != 0){
@@ -1293,6 +1360,8 @@ function highlightLabelGraph(handle){
 		}
 		d3.selectAll("#accountDeletion").style("opacity", 1);
 	}else{
+		d3.select("#line-" + handle + "-minimap")
+			.style("stroke-width", 4);
 		d3.select("#line-" + handle)
 			.style("stroke-width", 4);
 		d3.select("#line-" + handle)
@@ -1567,7 +1636,7 @@ function addAccountDeletionMark(){
 			temp.push(dataset[i])
 	}
 	var mikeGravelDataset = temp[temp.length-1];
-	if(typeof mikeGravelDataset != 'undefined'){
+	if(typeof mikeGravelDataset != 'undefined' && d3.select("#accountDeletion").empty()){
 		svg.append("rect")
 			.attr("id", "accountDeletion")
 			.attr("x", xScale(new Date(mikeGravelDataset.DateTime)))
@@ -1592,3 +1661,94 @@ function addAccountDeletionMark(){
 			});	
 	}
 }
+
+/*Function to setup X-axis for minimap*/
+function setupXaxisMinimap(svg, width, margin){
+	var xScale = d3.scaleTime()
+			.domain([new Date("2019-01-01 00:00:00"), new Date("2020-04-18 23:59:59")])
+			.range([ 0, width])
+			.nice();
+	svg.append("g")
+		.attr("transform", "translate(" + margin.left + "," + (minimapHeight + margin.top) + ")")
+		.call(d3.axisBottom(xScale).ticks(4).tickFormat(d3.timeFormat("%b")));
+	return xScale;
+}
+
+/*Function to setup X-axis for minimap*/
+function setupYaxisMinimap(svg, height, margin){
+	var yScale = d3.scaleLinear()
+			.domain([0, maxFollower])
+			.range([ height , 0 ])
+			.nice();
+	if (d3.select("#minimapyaxis").empty()){
+		svg.append("g")
+			.attr("id", "minimapyaxis")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+			.call(d3.axisLeft(yScale)
+					.tickFormat(d3.formatPrefix(".0", 1e6)));
+	}
+	else{
+		svg.select("#minimapyaxis")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+			.call(d3.axisLeft(yScale)
+					.tickFormat(d3.formatPrefix(".0", 1e6)));;
+	}
+	return yScale;
+}
+
+/*Function to plot Minimap*/
+function plotMinimap(){
+	console.log("Plot Minimap follower chart");
+	
+	dataNest.forEach(function(d, i){
+		svg_minimap.append("path")
+			.attr("class", "line")
+			.attr("d", minimapValueLine(d.values))
+			.attr("id", "line-" + d.values[0].handle + "-minimap")
+			.attr("fill", "none")
+			.style("opacity", 0.5)
+			.attr("transform", "translate(" + minimapMargin.left + "," + minimapMargin.top + ")")
+			.attr("stroke", function(){
+				return d.color = color(d.key);});
+			/*
+			.on("click", function(){
+				console.log("Clicked the text: " + i);
+				highlightLabelGraph(d.values[0].handle);
+			});*/
+	});
+}
+
+/*Function to update the Minimap follower chart*/
+function updateMinimapFollowerChart(){
+	//console.log(dataNest);
+	dataNest.forEach(function(d, i){
+		if(d3.select("#line-" + d.values[0].handle + "-minimap").empty()) {
+			svg_minimap.append("path")
+				.attr("class", "line")
+				.attr("d", minimapValueLine(d.values))
+				.attr("id", "line-" + d.values[0].handle + "-minimap")
+				.attr("fill", "none")
+				.attr("transform", "translate(" + minimapMargin.left + "," + minimapMargin.top + ")")
+				.attr("stroke", function(){
+					return d.color = color(d.key);})
+				.style("opacity", 0.5);
+				/*
+				.on("click", function(){
+					console.log("Clicked the text: " + i);
+					highlightLabelGraph(d.values[0].handle);
+				});
+				*/
+				
+			
+		} else {
+			svg_minimap.select("#line-" + d.values[0].handle + "-minimap")
+				.transition()
+				.duration(750)
+				.attr("d", function(){
+						return minimapValueLine(d.values);
+				});
+		}
+	});
+
+}
+
