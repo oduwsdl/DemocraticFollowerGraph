@@ -1,4 +1,4 @@
-# DemocaticFollowrGraph
+# DemocaticFollowerGraph
 
 Link to follower Graph
 
