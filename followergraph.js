@@ -692,12 +692,14 @@ function createFloatingAxis(){
 /*Function to bring the plot of candidate based on click from Candidate Floating Window*/
 function highlightCandidatePlot(handle){
 	if(document.getElementById(handle).checked){
-		document.getElementById("line-" + handle).scrollIntoView();
+		document.getElementById("label-" + handle).scrollIntoView({block: "center"});
 		d3.select("#line-" + handle)
 			.style("stroke-width",4);
 		var selectAllLines = $('.line').not("#line-"+handle);  
 		d3.selectAll(selectAllLines)
 			.style("stroke-width",1.5);
+		d3.select("#line-" + handle + "-dash")
+			.style("stroke-width",4);
 		d3.select("#label-" + handle)
 			.style("font-weight", "bold");
 		var selectAllText = $('.label').not("#label-" + handle);
@@ -899,7 +901,9 @@ function setupYaxis(svg){
 				.ticks(axisLabels.length)
 				.tickValues(axisLabels)
 				.tickFormat(function(d){
-					if(d >= 1000000)
+					if(d == 0)
+						return d;
+					else if(d >= 1000000)
 						return d3.formatPrefix(".2", 1e6)(d);
 					else
 						return d3.formatPrefix(".0", 1e4)(d);
@@ -913,7 +917,9 @@ function setupYaxis(svg){
 				.ticks(axisLabels.length)
 				.tickValues(axisLabels)
 				.tickFormat(function(d){
-					if(d >= 1000000)
+					if(d == 0)
+						return d;
+					else if(d >= 1000000)
 						return d3.formatPrefix(".2", 1e6)(d);
 					else
 						return d3.formatPrefix(".0", 1e4)(d);
@@ -1024,7 +1030,7 @@ function plotFollowerChart(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
 			});
-			
+
 		svg.append("path")
 			.attr("class", "line")
 			.attr("d", function(){
@@ -1037,12 +1043,17 @@ function plotFollowerChart(){
 						}
 					}
 					return valueLine(values);
+				}else{
+					console.log("Undefined line data:" + d.values[0].handle);
 				}
 			})
 			.attr("id", "line-" + d.values[0].handle + "-dash")
 			.attr("fill", "none")
-			.style("opacity", 1)
+			.style("opacity", function(d){
+				if(d != 'undefined')
+					return 1;})
 			.attr("stroke", function(){
+				console.log("Color: " + d.values[0].handle);
 				return d.color = color(d.key);})
 			.attr("stroke-width", 1.5)
 			.attr("stroke-dasharray", "0")
@@ -1050,7 +1061,6 @@ function plotFollowerChart(){
 					console.log("Clicked the text: " + i);
 					highlightLabelGraph(d.values[0].handle);
 			});
-			
 		svg.append("text")
 			.attr("class", "label")
 			.attr("id", "label-" + d.values[0].handle)
@@ -1060,7 +1070,7 @@ function plotFollowerChart(){
 			.attr("text-anchor", "start")
 			.style("fill", function() {
 				return d.color = color(d.key); })
-			.style("font", "16px times")
+			.style("font", "20px times")
 			.text("@" + d.values[0].handle)
 			.on("click", function(){
 				console.log("Clicked the text: " + i);
