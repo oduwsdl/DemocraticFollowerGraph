@@ -14,8 +14,6 @@
 var maxFollower = 0;
 var dataset = [];
 var dataNest;
-var minimapHeight = 300;
-var minimapWidth = 200;
 var margin = {top: 120, right: 130, bottom: 120, left: 90};
 var minimapMargin =  {top: 20, right: 10, bottom: 20, left: 30};
 var width = 1320 - margin.left - margin.right;
@@ -33,11 +31,6 @@ var color = d3.scaleOrdinal(d3.schemeCategory20);
 var div = d3.select("#followergraph").append("div")	
 			.attr("class", "tooltip")				
 			.style("opacity", 0);
-var drag;
-var svg_minimap;
-var slider;
-var sliderHeight = 50;
-var minimapValueLine;
 
 window.onload = function() {
     loadDemocraticList();
@@ -106,16 +99,9 @@ function loadDemocraticList(){
 	svg = setupSVG();
 	yScale = setupYaxis(svg);
 	xScale = setupXaxis(svg);
-	//var minimapXScale = setupXaxisMinimap(svg_minimap, minimapWidth, minimapMargin);
-	//var minimapYScale = setupYaxisMinimap(svg_minimap, minimapHeight, minimapMargin);
 	valueLine = d3.line()
 					.x(function(d) { return xScale(new Date(d.DateTime)); })
 					.y(function(d) { return yScale(d.FollowerCount); }); 
-	/*
-	minimapValueLine = d3.line()
-					.x(function(d) { return minimapXScale(new Date(d.DateTime)); })
-					.y(function(d) { return minimapYScale(d.FollowerCount); }); 
-	*/
 	candidateList = [];
 	createQuestionaireFloatingWindow();
 	d3.text("data/Dem_handles.txt", function(handles) {
@@ -223,20 +209,19 @@ function loadDemocraticList(){
 					
 				}
 				for(let j=0; j<primaryData.length; j++){
-					primaryStorage.push({"handle": handles[i].toLowerCase(), "follower": primaryClosestPoint[j], "event": primaryData[j].date});
+					primaryFollowers.push({"handle": handles[i].toLowerCase(), "follower": primaryClosestPoint[j], "event": primaryData[j].date, "count": (j + 1) });
 				}
 				
 				for(let j=0; j<debateData.length; j++){
-					debateStorage.push({"handle": handles[i].toLowerCase(), "follower": debateClosestPoint[j], "event": debateData[j].date, "count": j});
+					debateFollowers.push({"handle": handles[i].toLowerCase(), "follower": debateClosestPoint[j], "event": debateData[j].date, "count": (j + 1)});
 				}
-				primaryFollowers.push(primaryStorage);
-				debateFollowers.push(debateStorage);
+				//primaryFollowers.push(primaryStorage);
+				//debateFollowers.push(debateStorage);
 				var max = d3.max(data, function(d) { return d.FollowerCount; });
 				candidateList.push({"handle": handles[i].toLowerCase(), "follower": max, "announcement": annoucementClosestPoint, "withdrawl": withdrawlClosestPoint, "start": startMemento, "end": endMemento});
 				if (max > maxFollower){
 					maxFollower = max;
 					yScale = setupYaxis(svg);
-					//minimapYScale = setupYaxisMinimap(svg_minimap, minimapHeight, minimapMargin);
 				}
 				// Nest the entries by name
 				dataNest = d3.nest()
@@ -246,11 +231,9 @@ function loadDemocraticList(){
 							.entries(dataset);
 				if(d3.select("#scatter").empty()){
 					plotFollowerChart();
-					//plotMinimap();
 				}
 				else{
 					updateFollowerChart();
-					//updateMinimapFollowerChart();
 				}
 				sortCandidates();
 				createCandidateFloatingWindow(candidateList);
@@ -263,7 +246,6 @@ function loadDemocraticList(){
 /*Function to read follower analysis text file*/
 function readInfoFile(){
 	var candidateFollowerAnalysis = [];
-	console.log("readInfoFile");
 	d3.text("data/Info.txt", function(data) {
 		console.log("Read InfoTxt file");
 		data = data.split("\n")
@@ -324,6 +306,7 @@ function createQuestionaireMenu(id){
 				.enter()
 				.append("line")
 				.attr("class", "debate")
+				.attr("id", function(d){ return ("debate-" + d.id);})
 				.attr("x1", function(d){return xScale(d.date);})
 				.attr("x2", function(d){return xScale(d.date);})
 				.attr("y1", yScale(0))
@@ -338,70 +321,97 @@ function createQuestionaireMenu(id){
 					div.html(d.debate + "<br/>" + d.date.toISOString().split("T")[0])	
 						.style("left", (d3.event.pageX) + "px")		
 						.style("top", (d3.event.pageY - 28) + "px");
+					d3.select("#debate-" + d.id).style("stroke-width", 6);
+					let selectDebatePoints = $(".debatepoint");
+					for(let j=0; j < selectDebatePoints.length; j++){
+						if(selectDebatePoints[j].style.opacity > 0 && selectDebatePoints[j].getAttribute('count') == d.id){
+							d3.select("#" + selectDebatePoints[j].id)
+													.transition()
+													.duration(200)
+													.attr('r', 6);
+						}
+					}
 				})					
 				.on("mouseout", function(d) {		
 					div.transition()		
 						.duration(500)		
-						.style("opacity", 0);	
+						.style("opacity", 0);
+					d3.select("#debate-" + d.id).style("stroke-width", 4);	
+					let selectDebatePoints = $(".debatepoint");
+					for(let j=0; j < selectDebatePoints.length; j++){
+						if(selectDebatePoints[j].style.opacity > 0 && selectDebatePoints[j].getAttribute('count') == d.id){
+							d3.select("#" + selectDebatePoints[j].id)
+													.transition()
+													.duration(200)
+													.attr('r', 4);
+						}
+					}					
 				});
 			var debateList = returnDebateList();
-			var debateListInfo = []
+			//var debateListInfo = []
+			let x = 0;
 			for(let j=0; j<unsortedCandidateList.length; j++){
 				var tempList = [];
 				for(let k=0; k< debateList.length; k++){
 					let flag = true;
 					for(let a= 0; a < debateList[k].length; a++){
 						if(unsortedCandidateList[j] == debateList[k][a]){
-							tempList.push(true);
+							debateFollowers[x]["present"] = true;
 							flag = false;
 						}
 					}
 					if(flag){
-						tempList.push(false);
+						debateFollowers[x]["present"] = false;
 					}
+					x++;
 				}
-				debateListInfo.push(tempList);
 			}
-			for(var j=0; j< unsortedCandidateList.length; j++){
-				svg.selectAll("#debatePoints-" + unsortedCandidateList[j])
-					.data(debateFollowers[j])
-					.enter()
-					.append("circle")
-					.attr("id", "debatePoints-" + unsortedCandidateList[j])
-					.attr("class", "debatepoint")
-					.attr("cx", function(d){
-						if(debateListInfo[j][d.count] && d.handle == unsortedCandidateList[j])
-							return xScale(d.event);
-					})
-					.attr("cy", function(d){
-						if(debateListInfo[j][d.count] && d.handle == unsortedCandidateList[j])
-							return yScale(d.follower);
-					})
-					.attr("r", 4)
-					.style("opacity", function(d){
-						if(debateListInfo[j][d.count] && d.handle == unsortedCandidateList[j])
-							if($("#line-" + d.handle).css("opacity") == 1)
-								return 1;
-							else
-								return 0.2;
-						else
-							return 0;
-					})
-					.style("fill", "blue")
-					.on("mouseover", function(d) {		
-						div.transition()		
-							.duration(200)		
-							.style("opacity", 0.9);		
-						div.html("@" + d.handle + "<br/>" + "Debate:" + d.event.toISOString().split("T")[0])	
-							.style("left", (d3.event.pageX) + "px")		
-							.style("top", (d3.event.pageY - 28) + "px");
-					})					
-					.on("mouseout", function(d) {		
-						div.transition()		
-							.duration(500)		
-							.style("opacity", 0);	
-					});
-			}	
+			svg.selectAll(".debatepoint")
+				.data(debateFollowers)
+				.enter()
+				.filter(function(d){return d.present;})
+				.append("circle")
+				.attr("id", function(d){ return "debatePoints-" + d.handle + "-" + d.count;})
+				.attr("class", "debatepoint")
+				.attr("data:count", function(d){return d.count;})
+				.attr("cx", function(d){
+					return xScale(d.event);
+				})
+				.attr("cy", function(d){
+					return yScale(d.follower);
+				})
+				.attr("r", 4)
+				.style("opacity", function(d){
+					if($("#line-" + d.handle).css("opacity") == 1)
+						return 1;
+					else
+						return 0.2;
+				})
+				.style("fill", "blue")
+				.on("mouseover", function(d) {		
+					div.transition()		
+						.duration(200)		
+						.style("opacity", 0.9);		
+					div.html("@" + d.handle + "<br/>" + "Debate:" + d.event.toISOString().split("T")[0])	
+						.style("left", (d3.event.pageX) + "px")		
+						.style("top", (d3.event.pageY - 28) + "px");
+					d3.select("#debate-" + d.count).style("stroke-width", 6);	
+					d3.select("#debatePoints-" + d.handle + "-" + d.count)
+											.transition()
+											.duration(200)
+											.attr('r', 6);
+				})					
+				.on("mouseout", function(d) {		
+					div.transition()		
+						.duration(500)		
+						.style("opacity", 0);
+					d3.select("#debate-" + d.count).style("stroke-width", 4);	
+					let selectDebatePoints = $(".debatepoint");
+					d3.select("#debatePoints-" + d.handle + "-" + d.count)
+											.transition()
+											.duration(200)
+											.attr('r', 4);
+				});
 		}
 		else{
 			d3.selectAll(".debate").remove();
@@ -415,6 +425,7 @@ function createQuestionaireMenu(id){
 					.enter()
 					.append("line")
 					.attr("class", "primary")
+					.attr("id", function(d){return ("primary-" + d.id);})
 					.attr("x1", function(d){return (xScale(d.date));})
 					.attr("x2", function(d){return (xScale(d.date));})
 					.attr("y1", yScale(0))
@@ -429,55 +440,85 @@ function createQuestionaireMenu(id){
 						div.html(d.event + "<br/>" + d.date.toISOString().split("T")[0])	
 							.style("left", (d3.event.pageX) + "px")		
 							.style("top", (d3.event.pageY - 28) + "px");
+						d3.select("#primary-" + d.id).style("stroke-width", 6);
+						let selectPrimaryPoints = $(".primarypoint");
+						for(let j=0; j < selectPrimaryPoints.length; j++){
+							if(selectPrimaryPoints[j].style.opacity > 0 && selectPrimaryPoints[j].getAttribute('count') == d.id){
+								d3.select("#" + selectPrimaryPoints[j].id)
+														.transition()
+														.duration(200)
+														.attr('r', 6);
+							}
+						}
 					})					
 					.on("mouseout", function(d) {		
 						div.transition()		
 							.duration(500)		
-							.style("opacity", 0);	
+							.style("opacity", 0);
+						d3.select("#primary-" + d.id).style("stroke-width", 4);
+						let selectPrimaryPoints = $(".primarypoint");
+						for(let j=0; j < selectPrimaryPoints.length; j++){
+							if(selectPrimaryPoints[j].style.opacity > 0 && selectPrimaryPoints[j].getAttribute('count') == d.id){
+								d3.select("#" + selectPrimaryPoints[j].id)
+														.transition()
+														.duration(200)
+														.attr('r', 4);
+							}
+						}
 					});
-			for(var j=0; j< unsortedCandidateList.length; j++){
-				svg.selectAll("#primaryPoints-" + unsortedCandidateList[j])
-					.data(primaryFollowers[j])
-					.enter()
-					.append("circle")
-					.attr("id", "primaryPoints-" + unsortedCandidateList[j])
-					.attr("class", "primarypoint")
-					.attr("cx", function(d){
-						if(typeof(returnWithdrawlDate(d.handle)) != 'undefined' && returnWithdrawlDate(d.handle).getTime() > d.event.getTime() && returnCampaignAnnoucementDate(d.handle) < d.event.getTime() && d.handle == unsortedCandidateList[j]){
-							return xScale(d.event);
-						}
-					})
-					.attr("cy", function(d){
-						if(typeof(returnWithdrawlDate(d.handle)) != 'undefined' && returnWithdrawlDate(d.handle).getTime() > d.event.getTime() && returnCampaignAnnoucementDate(d.handle) < d.event.getTime()  && d.handle == unsortedCandidateList[j]){
-							return yScale(d.follower);
-						}
-					})
-					.attr("r", 4)
-					.style("opacity", function(d){
-						if(typeof(returnWithdrawlDate(d.handle)) != 'undefined' && returnWithdrawlDate(d.handle).getTime() > d.event.getTime() && returnCampaignAnnoucementDate(d.handle) < d.event.getTime()  && d.handle == unsortedCandidateList[j]){
-							if($("#line-" + d.handle).css("opacity") == 1)
-								return 1;
-							else
-								return 0.2;
-						}else{
-							return 0;
-						}
-					})
-					.style("fill", "#F503DF")
-					.on("mouseover", function(d) {		
-						div.transition()		
-							.duration(200)		
-							.style("opacity", 0.9);		
-						div.html("@" + d.handle + "<br/>" + "Primary:" + d.event.toISOString().split("T")[0] + "<br/>"  + "Announce: " + returnCampaignAnnoucementDate(d.handle).toISOString().split("T")[0] + "<br/>" + "Withdraw:" + returnWithdrawlDate(d.handle).toISOString().split("T")[0])	
-							.style("left", (d3.event.pageX) + "px")		
-							.style("top", (d3.event.pageY - 28) + "px");
-					})					
-					.on("mouseout", function(d) {		
-						div.transition()		
-							.duration(500)		
-							.style("opacity", 0);	
-					});
-			}		
+			console.log(primaryFollowers);
+			svg.selectAll(".primarypoint")
+				.data(primaryFollowers)
+				.enter()
+				.filter(function(d){
+					let withrawlDate = returnWithdrawlDate(d.handle);
+					let campaignDate = returnCampaignAnnoucementDate(d.handle);
+					if(typeof(returnWithdrawlDate(d.handle)) != 'undefined' && withrawlDate.getTime() > d.event.getTime() && campaignDate.getTime() < d.event.getTime())
+						return true;
+					else
+						return false;
+				})
+				.append("circle")
+				.attr("id", function(d){return ("primaryPoints-" + d.handle + "-" + d.count);})
+				.attr("class", "primarypoint")
+				.attr("data:count", function(d){return d.count;})
+				.attr("cx", function(d){
+						return xScale(d.event);
+				})
+				.attr("cy", function(d){
+						return yScale(d.follower);
+				})
+				.attr("r", 4)
+				.style("opacity", function(d){
+						if($("#line-" + d.handle).css("opacity") == 1)
+							return 1;
+						else
+							return 0.2;
+				})
+				.style("fill", "#F503DF")
+				.on("mouseover", function(d) {		
+					div.transition()		
+						.duration(200)		
+						.style("opacity", 0.9);		
+					div.html("@" + d.handle + "<br/>" + "Primary:" + d.event.toISOString().split("T")[0] + "<br/>"  + "Announce: " + returnCampaignAnnoucementDate(d.handle).toISOString().split("T")[0] + "<br/>" + "Withdraw:" + returnWithdrawlDate(d.handle).toISOString().split("T")[0])	
+						.style("left", (d3.event.pageX) + "px")		
+						.style("top", (d3.event.pageY - 28) + "px");
+					d3.select("#primary-" + d.count).style("stroke-width", 6);
+					d3.select("#primaryPoints-" + d.handle + "-" + d.count)
+											.transition()
+											.duration(200)
+											.attr('r', 6);
+				})					
+				.on("mouseout", function(d) {		
+					div.transition()		
+						.duration(500)		
+						.style("opacity", 0);
+					d3.select("#primary-" + d.count).style("stroke-width", 4);
+					d3.select("#primaryPoints-" + d.handle + "-" + d.count)
+											.transition()
+											.duration(200)
+											.attr('r', 4);					
+				});
 		}else{
 			d3.selectAll(".primary").remove();
 			d3.selectAll(".primarypoint").remove();
@@ -716,6 +757,8 @@ function changePlotStatus(handle){
 	}else{
 		var handlesList = [handle];
 	}
+	let selectDebatePoint = $(".debatepoint");
+	let selectPrimaryPoint = $(".primarypoint");
 	if(document.getElementById(handle).checked){
 		for(let i=0; i< handlesList.length; i++){
 			d3.select("#line-" + handlesList[i]+"-dash")
@@ -726,21 +769,34 @@ function changePlotStatus(handle){
 				.style("opacity", 1);
 			d3.select("#line-" + handlesList[i])
 				.style("stroke-width", 1.5);
+			d3.select("#line-" + handlesList[i] + "-dash")
+				.style("stroke-width", 1.5);
+			d3.select("#line-" + handlesList[i] + "-dash")
+				.style("stroke-dasharray", "0");
 			d3.select("#scatter-" + handlesList[i]).selectAll(".dot")
 				.style("opacity", 1);
 			d3.select("#label-" + handlesList[i])
 				.style("opacity", 1);
 			d3.select("#label-" + handlesList[i])
 				.style("font-weight", "normal");
-			d3.selectAll("#debatePoints-" + handlesList[i])
-				.style("opacity", 1);
-			d3.selectAll("#primaryPoints-" + handlesList[i])
-				.style("opacity", 1);
+			for(let j=0; j < selectDebatePoint.length; j++){
+				let temp = selectDebatePoint[j].id.split("-");
+				if(temp[1] == handlesList[i])
+					d3.select(selectDebatePoint[j])
+						.style("opacity", 1);				
+			}
+			for(let j=0; j < selectPrimaryPoint.length; j++){
+				let temp = selectPrimaryPoint[j].id.split("-");
+				if(temp[1] == handlesList[i])
+					d3.select(selectPrimaryPoint[j])
+						.style("opacity", 1);				
+			}
 			d3.select("#an-" + handlesList[i])
 				.style("opacity", 1);
 			d3.select("#w-" + handlesList[i])
 				.style("opacity", 1);
-			d3.selectAll("#accountDeletion").style("opacity", 1);
+			if(handlesList[i] == "mikegravel")	
+				d3.select("#accountDeletion").style("opacity", 1);
 			if(handle == "selectAll"){
 				document.getElementById(handlesList[i]).checked = true;
 			}
@@ -749,17 +805,26 @@ function changePlotStatus(handle){
 	}
 	else{
 		for(let i=0; i< handlesList.length; i++){
-			d3.selectAll("#accountDeletion").style("opacity", 0);
+			if(handlesList[i] == "mikegravel")
+				d3.select("#accountDeletion").style("opacity", 0);
 			d3.select("#line-" + handlesList[i])
 				.style("opacity", 0);
 			d3.select("#scatter-" + handlesList[i]).selectAll(".dot")
 				.style("opacity", 0);
 			d3.select("#label-" + handlesList[i])
 				.style("opacity", 0);
-			d3.selectAll("#debatePoints-" + handlesList[i])
-				.style("opacity", 0);
-			d3.selectAll("#primaryPoints-" + handlesList[i])
-				.style("opacity", 0);
+			for(let j=0; j < selectDebatePoint.length; j++){
+				let temp = selectDebatePoint[j].id.split("-");
+				if(temp[1] == handlesList[i])
+					d3.select(selectDebatePoint[j])
+						.style("opacity", 0);				
+			}
+			for(let j=0; j < selectPrimaryPoint.length; j++){
+				let temp = selectPrimaryPoint[j].id.split("-");
+				if(temp[1] == handlesList[i])
+					d3.select(selectPrimaryPoint[j])
+						.style("opacity", 0);				
+			}
 			d3.select("#an-" + handlesList[i])
 				.style("opacity", 0);
 			d3.select("#w-" + handlesList[i])
@@ -838,39 +903,14 @@ function createCandidateFloatingWindow(rankedOrderList){
 /*Function to set up SVG*/
 function setupSVG(){
 	var scrollContainer = document.getElementById('followergraph')
-	drag = d3.drag()
-		.on('start drag', function() { 
-			scrollContainer.scrollTop = d3.event.y * (23421 / 300);
-			console.log("Start Drag:  " + scrollContainer.scrollTop);
-			console.log("Start Drag y event:::  " + d3.event.y);
-			slider.attr('y', d3.event.y);
-		});
 
 	// Add SVG to the HTML
 	svg = d3.select(scrollContainer).append("svg")
-				.on('scroll', function(d) {
-					console.log("scroll: " + this.scrollTop);
-					let rectMove = this.scrollTop / (23421 / 300);
-					console.log("scroll y::: " + rectMove);
-					slider.attr('y', rectMove);
-				})			
+	
 				.attr("width", width + margin.left + margin.right)
 				.attr("height", height + margin.top + margin.bottom)
 				.append("g")
 				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-	svg_minimap = d3.select('#minimap').append("svg")
-						.attr('width', minimapWidth + minimapMargin.left)
-						.attr('height', minimapHeight + minimapMargin.top + minimapMargin.bottom)
-						.call(drag)
-						.append("g")
-						.attr("transform", "translate(" + 0 + "," + 0 + ")");
-
-	slider = svg_minimap.append('rect')
-				.attr('class', 'slider-rect')
-				.attr('width', minimapWidth)
-				.attr('height', sliderHeight)
-				.attr("transform", "translate(" + minimapMargin.left + "," + 0 + ")");;
 	
 	return svg;
 }
@@ -1355,20 +1395,20 @@ function highlightLabelGraph(handle){
 			}
 		}
 		
-		var selectDebatePoint = $('.debatepoint').not("#debatePoints-" + handle);
+		let selectDebatePoint = $('.debatepoint');
 		for (var i = 0, length = selectDebatePoint.length; i < length; i++) {
 			if (selectDebatePoint[i].style.opacity != 0){
 				d3.select(selectDebatePoint[i]).style("opacity", 1);
 			}
 		}
 		
-		var selectPrimaryPoint = $('.primarypoint').not("#primaryPoints-" + handle);
+		var selectPrimaryPoint = $('.primarypoint');
 		for (var i = 0, length = selectPrimaryPoint.length; i < length; i++) {
 			if (selectPrimaryPoint[i].style.opacity != 0){
 				d3.select(selectPrimaryPoint[i]).style("opacity", 1);
 			}
 		}
-		d3.selectAll("#accountDeletion").style("opacity", 1);
+		d3.select("#accountDeletion").style("opacity", 1);
 	}else{
 		d3.select("#line-" + handle + "-minimap")
 			.style("stroke-width", 4);
@@ -1415,25 +1455,28 @@ function highlightLabelGraph(handle){
 				d3.select(selectAllWithdrawl[i]).style("opacity", 0.2);
 			}
 		}
-
-		d3.selectAll("#debatePoints-" + handle).style("opacity", 1);
-		var selectDebatePoint = $('.debatepoint').not("#debatePoints-" + handle);
+		var selectDebatePoint = $('.debatepoint');
 		for (var i = 0, length = selectDebatePoint.length; i < length; i++) {
-			if (selectDebatePoint[i].style.opacity != 0){
+			let temp = selectDebatePoint[i].id.split("-");
+			if (temp[1] != handle && selectDebatePoint[i].style.opacity != 0){
 				d3.select(selectDebatePoint[i]).style("opacity", 0.2);
+			}else if(temp[1] == handle){
+				d3.select(selectDebatePoint[i]).style("opacity", 1);
 			}
 		}
-		d3.selectAll("#primaryPoints-" + handle).style("opacity", 1);
-		var selectPrimaryPoint = $('.primarypoint').not("#primaryPoints-" + handle);
+		var selectPrimaryPoint = $('.primarypoint');
 		for (var i = 0, length = selectPrimaryPoint.length; i < length; i++) {
-			if (selectPrimaryPoint[i].style.opacity != 0){
+			let temp = selectPrimaryPoint[i].id.split("-");
+			if (temp[1] != handle && selectPrimaryPoint[i].style.opacity != 0){
 				d3.select(selectPrimaryPoint[i]).style("opacity", 0.2);
+			}else if(temp[1] == handle){
+				d3.select(selectPrimaryPoint[i]).style("opacity", 1);
 			}
 		}
 		if(handle != "mikegravel"){
-			d3.selectAll("#accountDeletion").style("opacity", 0.2);
+			d3.select("#accountDeletion").style("opacity", 0.2);
 		}else{
-			d3.selectAll("#accountDeletion").style("opacity", 1);
+			d3.select("#accountDeletion").style("opacity", 1);
 		}
 		if($("#w-" + handle).css("opacity") == 1){
 			d3.select("#line-" + handle + "-dash")
@@ -1604,17 +1647,17 @@ function returnWithdrawlDate(handle){
 
 /*Function to return Debate Dates*/
 function returnDebateInfo(debate =-1){
-	var debateInfo = [{"date": new Date("2019-06-26"), "debate": "MSNBC Debate, Miami"},
-						{"date": new Date("2019-07-30"), "debate": "CNN Debate, Detroit"},
-						{"date": new Date("2019-09-12"), "debate": "ABC News Debate, Houston"},
-						{"date": new Date("2019-10-15"), "debate": "CNN Debate, Westerville"},
-						{"date": new Date("2019-11-20"), "debate": "MSNBC Debate, Atlanta"},
-						{"date": new Date("2019-12-19"), "debate": "PBS NewsHour Debate, Los Angeles"},
-						{"date": new Date("2020-01-14"), "debate": "CNN Debate, Des Moines"},
-						{"date": new Date("2020-02-07"), "debate": "ABC News Debate, Manchester, NH"},
-						{"date": new Date("2020-02-19"), "debate": "MSNBC Debate, Paradise"},
-						{"date": new Date("2020-02-25"), "debate": "CBS News Debate, Charleston"},
-						{"date": new Date("2020-03-15"), "debate": "CNN Debate, Washinton D.C."}];
+	var debateInfo = [{"date": new Date("2019-06-26"), "debate": "MSNBC Debate, Miami", "id": 1},
+						{"date": new Date("2019-07-30"), "debate": "CNN Debate, Detroit", "id": 2},
+						{"date": new Date("2019-09-12"), "debate": "ABC News Debate, Houston", "id": 3},
+						{"date": new Date("2019-10-15"), "debate": "CNN Debate, Westerville", "id": 4},
+						{"date": new Date("2019-11-20"), "debate": "MSNBC Debate, Atlanta", "id": 5},
+						{"date": new Date("2019-12-19"), "debate": "PBS NewsHour Debate, Los Angeles", "id": 6},
+						{"date": new Date("2020-01-14"), "debate": "CNN Debate, Des Moines", "id": 7},
+						{"date": new Date("2020-02-07"), "debate": "ABC News Debate, Manchester, NH", "id": 8},
+						{"date": new Date("2020-02-19"), "debate": "MSNBC Debate, Paradise", "id": 9},
+						{"date": new Date("2020-02-25"), "debate": "CBS News Debate, Charleston", "id": 10},
+						{"date": new Date("2020-03-15"), "debate": "CNN Debate, Washinton D.C.", "id": 11}];
 	if(debate == -1){
 		return debateInfo;
 	}else{
@@ -1624,13 +1667,13 @@ function returnDebateInfo(debate =-1){
 
 /*Function to return Primary and Caucus Information*/
 function returnPrimaryInfo(id=-1){
-	var caucusData = [{"date": new Date("2020-01-17"), "event": "Minnesota Primary"},
-					{"date": new Date("2020-02-03"), "event": "Iowa Caucus"},
-					{"date": new Date("2020-02-11"), "event": "New Hampshire Primary"},
-					{"date": new Date("2020-02-21"), "event": "Nevada Caucus"},
-					{"date": new Date("2020-02-29"), "event": "South Carolina Primary"},
-					{"date": new Date("2020-03-03"), "event": "Super Tuesday"},
-					{"date": new Date("2020-04-07"), "event": "Wisconsin Primary"}];
+	var caucusData = [{"date": new Date("2020-01-17"), "event": "Minnesota Primary", "id": 1},
+					{"date": new Date("2020-02-03"), "event": "Iowa Caucus", "id": 2},
+					{"date": new Date("2020-02-11"), "event": "New Hampshire Primary", "id": 3},
+					{"date": new Date("2020-02-21"), "event": "Nevada Caucus", "id": 4},
+					{"date": new Date("2020-02-29"), "event": "South Carolina Primary", "id": 5},
+					{"date": new Date("2020-03-03"), "event": "Super Tuesday", "id": 6},
+					{"date": new Date("2020-04-07"), "event": "Wisconsin Primary", "id": 7}];
 	if(id == -1){
 		return caucusData;
 	}else{
@@ -1647,11 +1690,11 @@ function addAccountDeletionMark(){
 	}
 	var mikeGravelDataset = temp[temp.length-1];
 	if(typeof mikeGravelDataset != 'undefined' && d3.select("#accountDeletion").empty()){
+		console.log(mikeGravelDataset);
 		svg.append("rect")
 			.attr("id", "accountDeletion")
 			.attr("x", xScale(new Date(mikeGravelDataset.DateTime)))
 			.attr("y", yScale(mikeGravelDataset.FollowerCount))
-			//.attr("r", 6)
 			.attr("width", 6)
 			.attr("height", 6)
 			.style("opacity", 1)
@@ -1671,94 +1714,3 @@ function addAccountDeletionMark(){
 			});	
 	}
 }
-
-/*Function to setup X-axis for minimap*/
-function setupXaxisMinimap(svg, width, margin){
-	var xScale = d3.scaleTime()
-			.domain([new Date("2019-01-01 00:00:00"), new Date("2020-04-18 23:59:59")])
-			.range([ 0, width])
-			.nice();
-	svg.append("g")
-		.attr("transform", "translate(" + margin.left + "," + (minimapHeight + margin.top) + ")")
-		.call(d3.axisBottom(xScale).ticks(4).tickFormat(d3.timeFormat("%b")));
-	return xScale;
-}
-
-/*Function to setup X-axis for minimap*/
-function setupYaxisMinimap(svg, height, margin){
-	var yScale = d3.scaleLinear()
-			.domain([0, maxFollower])
-			.range([ height , 0 ])
-			.nice();
-	if (d3.select("#minimapyaxis").empty()){
-		svg.append("g")
-			.attr("id", "minimapyaxis")
-			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-			.call(d3.axisLeft(yScale)
-					.tickFormat(d3.formatPrefix(".0", 1e6)));
-	}
-	else{
-		svg.select("#minimapyaxis")
-			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-			.call(d3.axisLeft(yScale)
-					.tickFormat(d3.formatPrefix(".0", 1e6)));;
-	}
-	return yScale;
-}
-
-/*Function to plot Minimap*/
-function plotMinimap(){
-	console.log("Plot Minimap follower chart");
-	
-	dataNest.forEach(function(d, i){
-		svg_minimap.append("path")
-			.attr("class", "line")
-			.attr("d", minimapValueLine(d.values))
-			.attr("id", "line-" + d.values[0].handle + "-minimap")
-			.attr("fill", "none")
-			.style("opacity", 0.5)
-			.attr("transform", "translate(" + minimapMargin.left + "," + minimapMargin.top + ")")
-			.attr("stroke", function(){
-				return d.color = color(d.key);});
-			/*
-			.on("click", function(){
-				console.log("Clicked the text: " + i);
-				highlightLabelGraph(d.values[0].handle);
-			});*/
-	});
-}
-
-/*Function to update the Minimap follower chart*/
-function updateMinimapFollowerChart(){
-	//console.log(dataNest);
-	dataNest.forEach(function(d, i){
-		if(d3.select("#line-" + d.values[0].handle + "-minimap").empty()) {
-			svg_minimap.append("path")
-				.attr("class", "line")
-				.attr("d", minimapValueLine(d.values))
-				.attr("id", "line-" + d.values[0].handle + "-minimap")
-				.attr("fill", "none")
-				.attr("transform", "translate(" + minimapMargin.left + "," + minimapMargin.top + ")")
-				.attr("stroke", function(){
-					return d.color = color(d.key);})
-				.style("opacity", 0.5);
-				/*
-				.on("click", function(){
-					console.log("Clicked the text: " + i);
-					highlightLabelGraph(d.values[0].handle);
-				});
-				*/
-				
-			
-		} else {
-			svg_minimap.select("#line-" + d.values[0].handle + "-minimap")
-				.transition()
-				.duration(750)
-				.attr("d", function(){
-						return minimapValueLine(d.values);
-				});
-		}
-	});
-
-}
-
