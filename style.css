@@ -7,7 +7,7 @@ h1 {
 }
 
 #floatingaxis {
-  position:fixed;
+  position:sticky;
   top:0%;
   z-index:1;
 }
@@ -15,10 +15,11 @@ h1 {
 #candidatewindow {
   position: fixed;
   z-index: 2;
-  left: 20px;
+  left: 1%;
   bottom: 5%;
   width: 200px;
   cursor: grab;
+  
 }
 
 #questionairewindow {
@@ -105,8 +106,20 @@ div.tooltip {
     cursor: pointer;
 }
 
-
-
 #container {
     position: relative;
+}
+
+#minimapwindow {
+  position: fixed;
+  z-index: 2;
+  left: 50%;
+  bottom: 10%;
+  width: 250px;
+  cursor: grab;
+}
+
+#minimapwindow .header{
+  background-color:#F503DF;
+  height: 20px;
 }
