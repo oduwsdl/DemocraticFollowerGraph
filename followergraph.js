@@ -549,10 +549,7 @@ function createQuestionaireMenu(id){
 				.attr("cy", function(d){return yScale(d.follower);})
 				.attr("r", 6)
 				.style("opacity", function(d){
-					if($("#line-" + d.handle).css("opacity") == 1)
-						return 1;
-					else
-						return 0.2;})
+					return $("#line-" + d.handle).css("opacity");})
 				.style("fill", "#006400")
 				.on("mouseover", function(d) {
 					var content;
@@ -601,10 +598,7 @@ function createQuestionaireMenu(id){
 				.attr("r", 6)
 				.style("fill", "red")
 				.style("opacity", function(d){
-					if($("#line-" + d.handle).css("opacity") == 1)
-						return 1;
-					else
-						return 0.2;})
+					return $("#line-" + d.handle).css("opacity");})
 				.on("mouseover", function(d) {		
 					div.transition()		
 						.duration(200)		
